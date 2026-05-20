@@ -51,3 +51,31 @@ COUNTER_BG    = QColor(7,  4,  1)
 COUNTER_DIG   = QColor(218, 192, 96)
 COUNTER_GHOST = QColor(88,  68, 24)
 
+
+class CounterData:
+    def __init__(self):
+        base = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent
+        self.path     = base / 'tally_data.json'
+        self.backup   = base / 'tally_data.bak'
+        self.tmp_path = base / 'tally_data.tmp'
+
+    def load(self) -> int:
+        for p in (self.path, self.backup):
+            try:
+                if p.exists():
+                    v = int(json.loads(p.read_text(encoding='utf-8')).get('count', 0))
+                    return max(0, min(v, 1_000_000))
+            except Exception:
+                continue
+        return 0
+
+    def save(self, count: int):
+        try:
+            self.tmp_path.write_text(
+                json.dumps({'count': count, 'version': 2}), encoding='utf-8')
+            if self.path.exists():
+                shutil.copy2(self.path, self.backup)
+            self.tmp_path.replace(self.path)
+        except Exception:
+            pass
+
